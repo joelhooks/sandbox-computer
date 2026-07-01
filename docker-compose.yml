@@ -1,0 +1,38 @@
+services:
+  sandbox:
+    build:
+      context: .
+      dockerfile: docker/sandbox.Dockerfile
+    image: ghcr.io/joelhooks/sandbox-computer:latest
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    environment:
+      SHELL: /usr/bin/zsh
+      TERM: xterm-256color
+    # Only published when the sandbox is started with `--service-ports`
+    # (see scripts/sandbox-ui-url.sh). Common dev-server ports; add more
+    # per-project by overriding this file, not by editing the template.
+    ports:
+      - "3000:3000"
+      - "4000:4000"
+      - "5173:5173"
+      - "8080:8080"
+      - "8787:8787"
+    volumes:
+      - .:/workspace
+      - sandbox-pi:/home/sandbox/.pi
+      - sandbox-claude:/home/sandbox/.claude
+      - sandbox-codex:/home/sandbox/.codex
+      - sandbox-opencode:/home/sandbox/.opencode
+      - sandbox-herdr:/home/sandbox/.config/herdr
+      - pnpm-store:/home/sandbox/.local/share/pnpm/store
+    command: zsh
+
+volumes:
+  sandbox-pi:
+  sandbox-claude:
+  sandbox-codex:
+  sandbox-opencode:
+  sandbox-herdr:
+  pnpm-store:
