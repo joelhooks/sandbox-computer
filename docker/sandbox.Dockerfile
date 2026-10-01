@@ -1,20 +1,20 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:22-bookworm
+FROM node:24-bookworm
 
 LABEL org.opencontainers.image.source="https://github.com/joelhooks/sandbox-computer"
 LABEL org.opencontainers.image.description="Joel's demo/example sandbox computer"
 
-ARG PI_VERSION=0.80.2
-ARG CLAUDE_CODE_VERSION=2.1.195
-ARG CODEX_VERSION=0.142.3
-ARG OPENCODE_VERSION=1.17.11
-ARG HERDR_VERSION=0.7.1
-ARG STARSHIP_VERSION=1.25.1
-ARG ATUIN_VERSION=18.16.1
+ARG PI_VERSION=0.99.2
+ARG CLAUDE_CODE_VERSION=2.1.286
+ARG CODEX_VERSION=0.159.3
+ARG OPENCODE_VERSION=1.18.34
+ARG HERDR_VERSION=0.9.3
+ARG STARSHIP_VERSION=1.26.0
+ARG ATUIN_VERSION=18.23.0
 ARG OH_MY_ZSH_REF=65749801cf4c3b1f3c79a20001909d72dadd307f
 ARG ZSH_AUTOSUGGESTIONS_REF=85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5
-ARG ZSH_SYNTAX_HIGHLIGHTING_REF=1d85c692615a25fe2293bdd44b34c217d5d2bf04
+ARG ZSH_SYNTAX_HIGHLIGHTING_REF=0bfcb582e71d3abe604ce67bc0fe5a21f377507e
 ARG TARGETARCH
 ARG USERNAME=sandbox
 ARG USER_UID=1001
@@ -55,7 +55,7 @@ RUN groupadd --gid ${USER_GID} ${USERNAME} \
   && chmod 0440 /etc/sudoers.d/${USERNAME}
 
 RUN corepack enable \
-  && corepack prepare pnpm@11.9.0 --activate \
+  && corepack prepare pnpm@12.8.1 --activate \
   && npm install -g --ignore-scripts @earendil-works/pi-coding-agent@${PI_VERSION} \
   && npm install -g \
     @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION} \
@@ -117,7 +117,7 @@ COPY --chown=sandbox:sandbox docker/sandbox-agent-notice.md /home/sandbox/agent-
 
 RUN mkdir -p /home/${USERNAME}/.cache /home/${USERNAME}/.config/atuin /home/${USERNAME}/.config/herdr /home/${USERNAME}/.local/bin /home/${USERNAME}/.local/share/opencode /home/${USERNAME}/.local/share/pnpm/store /home/${USERNAME}/.local/state /home/${USERNAME}/.pi/agent/extensions /home/${USERNAME}/.pi/agent/sessions /home/${USERNAME}/.claude /home/${USERNAME}/.codex /home/${USERNAME}/.opencode \
   && starship preset pure-preset -o /home/${USERNAME}/.config/starship.toml \
-  && pnpm config set store-dir /home/${USERNAME}/.local/share/pnpm/store --location=user \
+  && pnpm config set store-dir /home/${USERNAME}/.local/share/pnpm/store --global \
   && codex completion zsh > /home/${USERNAME}/.zsh/completions/_codex \
   && pnpm completion zsh > /home/${USERNAME}/.zsh/completions/_pnpm \
   && atuin gen-completions --shell zsh > /home/${USERNAME}/.zsh/completions/_atuin \
