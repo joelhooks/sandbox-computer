@@ -20,6 +20,40 @@ Does not include:
 Tool auth/state persists across restarts through named Docker volumes, not the image. See
 `docker/sandbox-agent-notice.md` for the in-container version of this contract.
 
+## Auth: one login per machine
+
+The auth/state volumes (`sandbox-pi`, `sandbox-claude`, `sandbox-codex`, `sandbox-opencode`,
+`sandbox-herdr`) have fixed global names, so every project scaffolded from this template —
+and every `sandbox-run.sh` launch — shares them on a given machine. Log in to each CLI once,
+inside any sandbox, and every other sandbox on that machine reuses it. Auth is never baked
+into the image and never lands in a project's git tree; each machine logs in separately.
+
+Prefer fully non-interactive auth? The CLIs take API keys via env var (`ANTHROPIC_API_KEY`,
+`OPENAI_API_KEY`, `pi --api-key`/its env equivalent) — pass them at run time
+(`docker compose run -e ...` or `docker run -e ...`), never in the image or the repo.
+
+Two caveats that follow from the shared names:
+
+- `docker compose down --volumes` in **any** scaffolded project wipes the machine-wide
+  auth/state. To reset one tool deliberately, `docker volume rm sandbox-<tool>` instead.
+- Projects scaffolded before the names were pinned have their own project-prefixed volumes
+  (e.g. `myproject_sandbox-claude`). Re-scaffold with `SANDBOX_INIT_FORCE=1 sandbox-init`
+  to pick up the shared set — one final re-login, then it's shared like everything else.
+
+## Run without scaffolding
+
+For ad-hoc cleanroom work — "build this in isolation", a workshop workspace, an example or
+video build — you don't need to copy anything into the target directory:
+
+```sh
+bash /path/to/sandbox-computer/scripts/sandbox-run.sh shell /path/to/project
+```
+
+Modes: `shell` (default), `pi`, `herdr`. `project_dir` defaults to `$PWD`. Uses the same
+image and the same shared auth volumes as the compose flow, but leaves the mounted
+directory untouched. Use `sandbox-init` instead when the project should own its sandbox
+setup (compose file, port publishing, demo URLs).
+
 ## Use in a project
 
 From any project directory:

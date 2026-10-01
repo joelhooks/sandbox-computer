@@ -29,10 +29,25 @@ services:
       - pnpm-store:/home/sandbox/.local/share/pnpm/store
     command: zsh
 
+# Fixed global names so every project scaffolded from this template shares
+# one set of volumes per machine: log in to each CLI once and every sandbox
+# on that machine reuses it. Without `name:`, Compose prefixes volumes with
+# the project directory name, which silently scopes auth per-project and
+# forces a re-login for every new project.
+#
+# Consequence: `docker compose down --volumes` in ANY project wipes this
+# machine-wide state. To reset one tool deliberately, use
+# `docker volume rm sandbox-<tool>` instead.
 volumes:
   sandbox-pi:
+    name: sandbox-pi
   sandbox-claude:
+    name: sandbox-claude
   sandbox-codex:
+    name: sandbox-codex
   sandbox-opencode:
+    name: sandbox-opencode
   sandbox-herdr:
+    name: sandbox-herdr
   pnpm-store:
+    name: sandbox-pnpm-store
