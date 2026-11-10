@@ -22,6 +22,7 @@ target_dir="$(cd "${1:-.}" && pwd)"
 
 portable_paths=(
   "docker/sandbox.Dockerfile"
+  "docker/sandbox-entrypoint.sh"
   "docker/sandbox.zshrc"
   "docker/sandbox-agent-notice.md"
   "docker/zsh-completions"

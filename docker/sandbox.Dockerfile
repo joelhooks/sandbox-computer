@@ -1,17 +1,26 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:24-bookworm
+# Pin a Node 24 patch release: starters demoed from this image need >=24.18.0,
+# and the floating node:24-bookworm tag gives no lower bound.
+FROM node:24.22.2-bookworm
 
 LABEL org.opencontainers.image.source="https://github.com/joelhooks/sandbox-computer"
 LABEL org.opencontainers.image.description="Joel's demo/example sandbox computer"
 
-ARG PI_VERSION=0.99.2
-ARG CLAUDE_CODE_VERSION=2.1.286
-ARG CODEX_VERSION=0.159.3
-ARG OPENCODE_VERSION=1.18.34
-ARG HERDR_VERSION=0.9.3
-ARG STARSHIP_VERSION=1.26.0
-ARG ATUIN_VERSION=18.23.0
+ARG PI_VERSION=1.5.2
+ARG PI_CLAUDE_BRIDGE_VERSION=0.12.0
+ARG CLAUDE_CODE_VERSION=2.1.322
+ARG CODEX_VERSION=0.167.1
+ARG OPENCODE_VERSION=1.19.5
+ARG HERDR_VERSION=0.9.5
+ARG PNPM_VERSION=12.18.0
+# npm is pinned, not left at Node's bundled release (11.19.1 in 24.22.2): some
+# Pi packages declare an exact npm in devEngines with onFail "error", and Pi
+# installs packages with npm, so a newer npm refuses them (EBADDEVENGINES).
+# Lift this when those packages relax the pin.
+ARG NPM_VERSION=11.16.0
+ARG STARSHIP_VERSION=1.27.0
+ARG ATUIN_VERSION=18.24.6
 ARG OH_MY_ZSH_REF=65749801cf4c3b1f3c79a20001909d72dadd307f
 ARG ZSH_AUTOSUGGESTIONS_REF=85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5
 ARG ZSH_SYNTAX_HIGHLIGHTING_REF=0bfcb582e71d3abe604ce67bc0fe5a21f377507e
@@ -26,11 +35,15 @@ ENV NPM_CONFIG_STORE_DIR=/home/${USERNAME}/.local/share/pnpm/store
 ENV PATH=/home/${USERNAME}/.local/share/pnpm:/home/${USERNAME}/.npm-global/bin:/home/${USERNAME}/.local/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
 ENV SHELL=/usr/bin/zsh
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+# Pi is pinned in this image (and projects pin their own); skip the
+# "run pi update" prompt that would steer guests off the pinned version.
+ENV PI_SKIP_VERSION_CHECK=1
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
+    fd-find \
     fzf \
     git \
     jq \
@@ -54,8 +67,10 @@ RUN groupadd --gid ${USER_GID} ${USERNAME} \
   && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME} \
   && chmod 0440 /etc/sudoers.d/${USERNAME}
 
-RUN corepack enable \
-  && corepack prepare pnpm@12.8.1 --activate \
+RUN npm install -g npm@${NPM_VERSION} \
+  && npm --version \
+  && corepack enable \
+  && corepack prepare pnpm@${PNPM_VERSION} --activate \
   && npm install -g --ignore-scripts @earendil-works/pi-coding-agent@${PI_VERSION} \
   && npm install -g \
     @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION} \
@@ -96,6 +111,9 @@ RUN case "${TARGETARCH:-$(dpkg --print-architecture)}" in \
   && rm -rf "${atuin_archive}" "${atuin_archive}.sha256" "atuin-${atuin_target}" \
   && atuin --version
 
+# npm is pinned above; don't nag guests to upgrade it.
+ENV NPM_CONFIG_UPDATE_NOTIFIER=false
+
 USER ${USERNAME}
 WORKDIR /workspace
 
@@ -122,5 +140,20 @@ RUN mkdir -p /home/${USERNAME}/.cache /home/${USERNAME}/.config/atuin /home/${US
   && pnpm completion zsh > /home/${USERNAME}/.zsh/completions/_pnpm \
   && atuin gen-completions --shell zsh > /home/${USERNAME}/.zsh/completions/_atuin \
   && printf '%s\n' 'auto_sync = false' 'update_check = false' 'style = "compact"' 'inline_height = 20' 'show_preview = true' 'enter_accept = true' > /home/${USERNAME}/.config/atuin/config.toml
+
+# claude-bridge lets Pi use Claude Code, and a Claude plan login, as a model
+# provider (claude-bridge/* models). Installed the way Pi installs packages,
+# into the image's ~/.pi/agent (settings.json + npm/). No login and no keys:
+# the guest runs `claude` once to log in, and that state lives in the
+# sandbox-claude volume. Docker copies this into a sandbox-pi volume only when
+# that volume is first created; the entrypoint below covers older volumes.
+ENV PI_CLAUDE_BRIDGE_VERSION=${PI_CLAUDE_BRIDGE_VERSION}
+RUN pi install npm:pi-claude-bridge@${PI_CLAUDE_BRIDGE_VERSION} \
+  && pi list \
+  && : > /home/${USERNAME}/.pi/agent/.sandbox-claude-bridge-offered
+
+# Adds claude-bridge once to a sandbox-pi volume made by an older image.
+COPY --chmod=0755 docker/sandbox-entrypoint.sh /usr/local/bin/sandbox-entrypoint
+ENTRYPOINT ["/usr/local/bin/sandbox-entrypoint"]
 
 CMD ["zsh"]

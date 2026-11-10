@@ -13,6 +13,11 @@ Installed CLIs:
 
 Run auth/setup explicitly for your chosen harness. Keep tokens out of the repo.
 
+Pi has the claude-bridge package: after `claude` is logged in, `claude-bridge/*` models use
+Claude Code as the provider. Env vars from the host (a proxy's `ANTHROPIC_BASE_URL`, an API
+key) arrive only when the launcher was started with `SANDBOX_ENV="NAME ..."`; never write
+their values into files here.
+
 Tool state (`~/.pi`, `~/.claude`, `~/.codex`, `~/.opencode`, `~/.config/herdr`) persists
 across restarts through named Docker volumes, not the image. Those volumes are shared by
 every sandbox on this machine — log in once and other sandboxes here reuse it. That also

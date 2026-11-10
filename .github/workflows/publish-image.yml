@@ -8,6 +8,7 @@ on:
     paths:
       - .github/workflows/publish-image.yml
       - docker/sandbox.Dockerfile
+      - docker/sandbox-entrypoint.sh
       - docker/sandbox.zshrc
       - docker/sandbox-agent-notice.md
       - docker/zsh-completions/**

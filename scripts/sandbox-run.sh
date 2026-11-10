@@ -9,7 +9,29 @@
 #
 # Usage: sandbox-run.sh [shell|pi|herdr] [project_dir]
 #   project_dir defaults to $PWD.
+#
+# Env passthrough: SANDBOX_ENV is a space- or comma-separated list of variable
+# NAMES to pass from your shell into the container, e.g.
+#   SANDBOX_ENV="ANTHROPIC_BASE_URL ANTHROPIC_API_KEY" sandbox-run.sh pi .
+# Each becomes `docker run -e NAME`, so Docker reads the value from this
+# process's environment: values never appear on the command line, in a file,
+# or in the image. Unset names are skipped with a warning.
 set -euo pipefail
+
+env_args=()
+sandbox_env="${SANDBOX_ENV:-}"
+read -r -a env_names <<<"${sandbox_env//,/ }"
+for name in ${env_names[@]+"${env_names[@]}"}; do
+  if [[ ! "${name}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+    echo "SANDBOX_ENV: '${name}' is not a valid variable name; skipping." >&2
+    continue
+  fi
+  if [[ -z "${!name+x}" ]]; then
+    echo "SANDBOX_ENV: ${name} is not set in this shell; skipping." >&2
+    continue
+  fi
+  env_args+=(-e "${name}")
+done
 
 mode="${1:-shell}"
 project_dir="$(cd "${2:-$PWD}" && pwd)"
@@ -28,6 +50,7 @@ docker_args=(
   docker run --rm -it
   -e SHELL=/usr/bin/zsh
   -e TERM=xterm-256color
+  ${env_args[@]+"${env_args[@]}"}
   -v "${project_dir}:/workspace"
   -v sandbox-pi:/home/sandbox/.pi
   -v sandbox-claude:/home/sandbox/.claude
